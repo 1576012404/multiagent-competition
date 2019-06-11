@@ -8,6 +8,8 @@ class Ant(Agent):
         if xml_path is None:
             xml_path = os.path.join(os.path.dirname(__file__), "assets", "ant_body.xml")
         super(Ant, self).__init__(agent_id, xml_path)
+        goal_symbol=1 if agent_id==0 else -1
+        self.goal_symbol=np.array([goal_symbol],np.float32)
 
     def set_goal(self, goal):
         self.GOAL = goal
@@ -21,6 +23,9 @@ class Ant(Agent):
     def after_step(self, action):
         xposafter = self.get_body_com("torso")[0]
         forward_reward = (xposafter - self._xposbefore) / self.env.dt
+        # if self.id==0:
+        #     print("step",self._xposbefore,xposafter)
+
         if self.move_left:
             forward_reward *= -1
         ctrl_cost = .5 * np.square(action).sum()
@@ -31,7 +36,8 @@ class Ant(Agent):
         qpos = self.get_qpos()
         agent_standing = qpos[2] >= 0.28
         survive = 1.0 if agent_standing else -1.
-        reward = forward_reward - ctrl_cost - contact_cost + survive
+        reward = forward_reward
+        # reward = forward_reward - ctrl_cost - contact_cost + survive
 
         reward_info = dict()
         reward_info['reward_forward'] = forward_reward
@@ -39,6 +45,8 @@ class Ant(Agent):
         reward_info['reward_contact'] = contact_cost
         reward_info['reward_survive'] = survive
         reward_info['reward_move'] = reward
+        # if not agent_standing:
+        #     print("agent_standing",self.id,agent_standing)
 
         done = not agent_standing
 
@@ -54,9 +62,11 @@ class Ant(Agent):
         my_vel = self.get_qvel()
         cfrc_ext = np.clip(self.get_cfrc_ext(), -1, 1)
 
+
         obs = np.concatenate(
             [my_pos.flat, my_vel.flat, cfrc_ext.flat,
              other_pos.flat]
+                # ,self.goal_symbol]
         )
         return obs
 

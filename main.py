@@ -6,6 +6,7 @@ import sys
 import argparse
 import tensorflow as tf
 import numpy as np
+from collections import deque
 
 def load_from_file(param_pkl_path):
     with open(param_pkl_path, 'rb') as f:
@@ -50,10 +51,12 @@ def run(config):
         sys.exit()
 
     param_paths = config.param_paths
+    print("param_paths",param_paths)
 
     tf_config = tf.ConfigProto(
         inter_op_parallelism_threads=1,
         intra_op_parallelism_threads=1)
+
     sess = tf.Session(config=tf_config)
     sess.__enter__()
 
@@ -74,39 +77,66 @@ def run(config):
     # initialize uninitialized variables
     sess.run(tf.variables_initializer(tf.global_variables()))
 
+
     params = [load_from_file(param_pkl_path=path) for path in param_paths]
     for i in range(len(policy)):
         setFromFlat(policy[i].get_variables(), params[i])
 
+
     max_episodes = config.max_episodes
     num_episodes = 0
-    nstep = 0
     total_reward = [0.0  for _ in range(len(policy))]
     total_scores = [0 for _ in range(len(policy))]
     # total_scores = np.asarray(total_scores)
     observation = env.reset()
     print("-"*5 + " Episode %d " % (num_episodes+1) + "-"*5)
+    iFrame=0
+    iReward = np.zeros((2,))
+    reward_list = deque(maxlen=100)
+    reward_list2 = deque(maxlen=100)
+    win_times = [0, 0]
+
     while num_episodes < max_episodes:
         env.render()
-        action = tuple([policy[i].act(stochastic=True, observation=observation[i])[0]
-                        for i in range(len(policy))])
+        action=[policy[i].act(stochastic=True, observation=observation[i])[0]
+                        for i in range(len(policy))]
+        action[1]=np.zeros((8),dtype=np.float32)
+        action = tuple(action)
         observation, reward, done, infos = env.step(action)
-        nstep += 1
-        for i in range(len(policy)):
-            total_reward[i] += reward[i]
+        iReward += reward
+        iFrame+=1
+        # print("obs",len(observation),observation[0].shape,len(done),done,len(reward),reward)
+        # for i in range(len(policy)):
+        #     total_reward[i] += reward[i]
+
         if done[0]:
+
+            iWin = -1
+            if 'winner' in infos[0]:
+                iWin = 0
+                win_times[0]+=1
+            elif 'winner' in infos[1]:
+                iWin = 1
+                win_times[1] += 1
+
+            reward_list.append(iReward[0])
+            reward_list2.append(iReward[1])
+            print("winer:",iWin,"%s/%s"%(win_times[0],win_times[1]), "frames:",iFrame, "agent0", iReward[0], sum(reward_list) / len(reward_list), "agnet2",
+                  iReward[1], sum(reward_list2) / len(reward_list2))
+
             num_episodes += 1
-            draw = True
-            for i in range(len(policy)):
-                if 'winner' in infos[i]:
-                    draw = False
-                    total_scores[i] += 1
-                    print("Winner: Agent {}, Scores: {}, Total Episodes: {}".format(i, total_scores, num_episodes))
-            if draw:
-                print("Game Tied: Agent {}, Scores: {}, Total Episodes: {}".format(i, total_scores, num_episodes))
+            # draw = True
+            # for i in range(len(policy)):
+            #     if 'winner' in infos[i]:
+            #         draw = False
+            #         total_scores[i] += 1
+            #         print("Winner: Agent {}, Scores: {}, Total Episodes: {},Step:{}".format(i, total_scores, num_episodes,iFrame))
+            # if draw:
+            #     print("Game Tied: Agent {}, Scores: {}, Total Episodes: {},Step:{}".format(i, total_scores, num_episodes,iFrame))
             observation = env.reset()
-            nstep = 0
-            total_reward = [0.0  for _ in range(len(policy))]
+            iFrame = 0
+            iReward = np.zeros((2,))
+            # total_reward = [0.0  for _ in range(len(policy))]
             for i in range(len(policy)):
                 policy[i].reset()
             if num_episodes < max_episodes:

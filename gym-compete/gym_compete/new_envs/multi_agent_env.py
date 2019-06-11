@@ -113,14 +113,18 @@ class MultiAgentEnv(Env):
     def goal_rewards(self, infos=None, agent_dones=None):
         touchdowns = [self.agents[i].reached_goal()
                       for i in range(self.n_agents)]
+        # print("touchdowns",touchdowns)
         num_reached_goal = sum(touchdowns)
         goal_rews = [0. for _ in range(self.n_agents)]
         if num_reached_goal != 1:
             return goal_rews, num_reached_goal > 0
+
+
         for i in range(self.n_agents):
             if touchdowns[i]:
                 goal_rews[i] = self.GOAL_REWARD
                 if infos:
+                    # print("reach goal",i)
                     infos[i]['winner'] = True
             else:
                 goal_rews[i] = - self.GOAL_REWARD
@@ -154,6 +158,7 @@ class MultiAgentEnv(Env):
         done = self._get_done(dones, game_done)
         infos = tuple(infos)
         obses = self._get_obs()
+
         return obses, rews, done, infos
 
     def _get_obs(self):

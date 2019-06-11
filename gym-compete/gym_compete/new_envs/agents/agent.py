@@ -97,13 +97,22 @@ class Agent(object):
                          for body in self.body_names]
         self.body_dofnum = self.env.model.body_dofnum[self.body_ids]
         self.nv = self.body_dofnum.sum()
+        # print("body_name",self.body_names)
+        # print("body_ids",self.body_ids)
+        # print("dofnum",self.body_dofnum)
+        # print("nv",self.nv)
         self.body_dofadr = self.env.model.body_dofadr[self.body_ids]
         dof = list_filter(lambda x: x >= 0, self.body_dofadr)
+        # print("body_dofadr",self.body_dofadr)
+        # print("dof",dof)
         self.qvel_start_idx = int(dof[0])
         last_dof_body_id = self.body_dofnum.shape[0] - 1
+        # print("last_dof_body_id1",last_dof_body_id)
         while self.body_dofnum[last_dof_body_id] == 0:
             last_dof_body_id -= 1
+        # print("last_dof_body_id2", last_dof_body_id)
         self.qvel_end_idx = int(dof[-1] + self.body_dofnum[last_dof_body_id])
+        # print("self.qvel_end_idx",self.qvel_end_idx)
 
 
     def _set_joint(self):
@@ -118,6 +127,14 @@ class Agent(object):
         self.nq = sum(self.jnt_nqpos)
         self.qpos_start_idx = int(self.jnt_qposadr[0])
         self.qpos_end_idx = int(self.jnt_qposadr[-1] + self.jnt_nqpos[-1])
+        # print("joint******************")
+        # print("join_names",self.join_names)
+        # print("joint_ids",self.joint_ids)
+        # print("jnt_type",self.jnt_type)
+        # print("jnt_nqpos",self.jnt_nqpos)
+        # print("jnt_qposadr",self.jnt_qposadr)
+        # print("nq",self.nq,self.qpos_start_idx,self.qpos_end_idx)
+        # print("end^^^^^^^^^^^^^^^")
 
         # self.jnt_dofadr = self.env.model.jnt_dofadr[self.joint_ids]
         # dof = list_filter(lambda x: x >= 0, self.jnt_dofadr)
@@ -182,6 +199,7 @@ class Agent(object):
         return qpos
 
     def get_qpos(self):
+        # print("ge_pos",self.id,self.qpos_start_idx,self.qpos_end_idx)
         '''
         Note: this relies on the qpos for one agent being contiguously located
         this is generally true, use depricated_get_qpos if not
