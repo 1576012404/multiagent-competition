@@ -36,7 +36,7 @@ class Ant(Agent):
         qpos = self.get_qpos()
         agent_standing = qpos[2] >= 0.28
         survive = 1.0 if agent_standing else -1.
-        reward = forward_reward
+        reward = forward_reward - ctrl_cost - contact_cost + survive
         # reward = forward_reward - ctrl_cost - contact_cost + survive
 
         reward_info = dict()

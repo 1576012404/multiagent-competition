@@ -131,7 +131,8 @@ class MultiAgentEnv(Env):
         return goal_rews, True
 
     def _get_done(self, dones, game_done):
-        done = np.all(dones)
+        # done = np.all(dones)
+        done = dones[0]
         done = game_done or not np.isfinite(self.state_vector()).all() or done
         dones = tuple(done for _ in range(self.n_agents))
         return dones

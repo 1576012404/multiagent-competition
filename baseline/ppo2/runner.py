@@ -18,7 +18,7 @@ class Runner():
         self.obs_list = env.reset()
         self.nsteps = nsteps
         self.states_list = [model.initial_state for model in model_list]
-        print("state_list",self.states_list)
+        print("obs_list",len(self.obs_list),self.obs_list[0].shape)
         self.dones = [[False for _ in range(nenv)]for _ in range(self.n_agent)]
         # Lambda used in GAE (General Advantage Estimation)
         self.lam = lam
@@ -35,10 +35,8 @@ class Runner():
         for _ in range(self.nsteps):
             # Given observations, get action value and neglopacs
             # We already have self.obs because Runner superclass run self.obs[:] = env.reset() on init
-
             all_agent_action=[]  
             states_list=[]
-            
             for i in range(self.n_agent):
                 actions, values,states, neglogpacs = self.model_list[i].step(self.obs_list[i], S=self.states_list[i], M=self.dones[i])
                 mb_obs[i].append(self.obs_list[i].copy())
@@ -65,8 +63,7 @@ class Runner():
         mb_rewards = [ np.asarray(rewards, dtype=np.float32)for rewards in mb_rewards]
         mb_actions = [ np.asarray(actions, dtype=np.float32)for actions in mb_actions]
         mb_values = [ np.asarray(values, dtype=np.float32)for values in mb_values]
-        
-        mb_neglogpacs = np.asarray(mb_neglogpacs, dtype=np.float32)
+        mb_neglogpacs =[ np.asarray(neglogpacs, dtype=np.float32)for neglogpacs in mb_neglogpacs]
         mb_dones = [ np.asarray(dones, dtype=np.bool)for dones in mb_dones]
         last_values=[]
 
@@ -91,6 +88,7 @@ class Runner():
                 mb_advs[i][t] = lastgaelam[i] = delta + self.gamma * self.lam * nextnonterminal * lastgaelam[i]
             # print("mb_values", mb_advs[0].shape,mb_values[0].shape)
             single_returns = mb_advs[i] + mb_values[i]
+
             mb_returns.append(single_returns)
         return (*map(sf01, (mb_obs, mb_returns, mb_dones, mb_actions, mb_values, mb_neglogpacs)),
             mb_states, epinfos)

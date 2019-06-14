@@ -14,6 +14,7 @@ def load_from_file(param_pkl_path):
     return params
 
 def setFromFlat(var_list, flat_params):
+    print("var_list",var_list)
     shapes = list(map(lambda x: x.get_shape().as_list(), var_list))
     total_size = np.sum([int(np.prod(shape)) for shape in shapes])
     theta = tf.placeholder(tf.float32, [total_size])
@@ -100,8 +101,8 @@ def run(config):
         env.render()
         action=[policy[i].act(stochastic=True, observation=observation[i])[0]
                         for i in range(len(policy))]
-        action[1]=np.zeros((8),dtype=np.float32)
-        action = tuple(action)
+        # action[1]=np.zeros((8),dtype=np.float32)
+        # action = tuple(action)
         observation, reward, done, infos = env.step(action)
         iReward += reward
         iFrame+=1

@@ -67,8 +67,8 @@ class Env(gymEnv):
             if self.m_EpCount%10==0:
                 iLen=len(self.m_Eposide0)
                 print("winrate",sum(self.m_Eposide0)/iLen,sum(self.m_Eposide1)/iLen,iLen)
-        # if self.m_Index==0:
-        #     self.render()
+        if self.m_Index==0:
+            self.render()
         return observation,reward,done,infos
 
     def render(self,mode="Human"):
@@ -77,9 +77,7 @@ class Env(gymEnv):
 
 
 
-def Train():
-    logdir = "baselineLog/ppo" + datetime.datetime.now().strftime("baselines-%Y-%m-%d-%H-%M-%S-%f")
-    logger.configure(logdir, ["tensorboard", "stdout"])
+def Eval():
     def EnvFunc(iIndex):
         def InnerFunc():
             oEnv=Env(iIndex)
@@ -93,56 +91,71 @@ def Train():
 
     learning_rate = linear_schedule(3e-4)
     clip_range = linear_schedule(0.2)
-    n_timesteps = int(1e8)
+    n_timesteps = int(0)
     hyperparmas = {'nsteps': 1024, 'noptepochs': 10, 'nminibatches': 32, 'lr': learning_rate, 'cliprange': clip_range,
                    'vf_coef': 0.5, 'ent_coef': 0.00}
 
-    num_env = 20
-    env = SubprocVecEnvMulti([EnvFunc(i) for i in range(num_env)],num_agent=2)
+    num_env = 1
+    num_agent=2
+    env = SubprocVecEnvMulti([EnvFunc(i) for i in range(num_env)],num_agent=num_agent)
     env=VecMonitorMulti(env)
     env=VecNormalizeMulti(env)
 
-    act = ppo2.learn(
+    act_list = ppo2.learn(
         network="mlp",
         env=env,
         total_timesteps=n_timesteps,
         log_interval=4,
         save_interval=100,
-        # load_path="baselineLog/ppobaseliens-2019-06-05-11-26-10-382460/checkpoints/00300",
+        load_path=["baselineLog/ppobaselines-2019-06-12-14-47-25-043390/checkpoints/0-03400",
+                   "baselineLog/ppobaselines-2019-06-12-14-47-25-043390/checkpoints/1-03400"],
+
         **hyperparmas,
 
         value_network="copy"
     )
 
-
-
-
-
-
-def RomdomPlay():
-    oEnv=Env()
-    bDone=False
-    iFrame=0
-    obs=oEnv.reset()
-    # print("reset",obs)
+    obs = env.reset()
+    print("obs", obs[0].shape)
+    bDone = False
+    iFrame = 0
+    iReward = np.zeros((2,))
+    reward_list = deque(maxlen=100)
+    reward_list2 = deque(maxlen=100)
     while not bDone:
-        action = np.random.uniform(-1., 1., size=(3,)).astype(np.float32)
+        all_agent_action=[]
+        for i in range(num_agent):
+            actions = act_list[i].step(obs[i])[0]
+            all_agent_action.append(actions)
+        # print("all_agent_action",all_agent_action)
 
-        action2 = np.random.uniform(-1., 1., size=(3,)).astype(np.float32)
-        actions=[action,action2]
-        # actions = (np.zeros((8,), np.float32), np.zeros((8,), np.float32))
-        _obs,reward,done,_=oEnv.step(actions)
-        # print("step",reward,done,type(done),type(done[0]))
-        iFrame+=1
-        oEnv.render()
-        if done[0]:
-            _obs=oEnv.reset()
-            print("reset.................",iFrame,len(_obs),_obs[0].shape)
-            iFrame=0
-            # bDone=True
+        all_env_action=list(zip(*all_agent_action))
+        # print("all_env_action",all_env_action)
+        obs, reward, done, info = env.step(all_env_action)
+        iReward += np.array([reward[0][0],reward[1][0]])
+        # time.sleep(0.01)
+        # print("reward",reward)
+        iFrame += 1
+        # env.render()
+        if done[0][0]:
+            iWin = -1
+            if 'winner' in info[0][0]:
+                iWin = 0
+            elif 'winner' in info[1][0]:
+                iWin = 1
+
+            reward_list.append('winner' in info[0][0])
+            reward_list2.append('winner' in info[1][0])
+            print("winer:", iWin, iFrame, "agent0", iReward[0], sum(reward_list) / len(reward_list), "agnet2",
+                  iReward[1], sum(reward_list2) / len(reward_list2))
+
+            iFrame = 0
+            iReward = np.zeros((2,))
+            obs = env.reset()
+
 
 
 
 if __name__=="__main__":
     # RomdomPlay()
-    Train()
+    Eval()

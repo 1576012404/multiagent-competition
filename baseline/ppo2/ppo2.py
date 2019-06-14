@@ -227,7 +227,7 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
                 print('Saving to', savepath)
                 model.save(savepath)
 
-    return model
+    return model_list
 # Avoid division error when calculate the mean (in our case if epinfo is empty returns np.nan, not return an error)
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
